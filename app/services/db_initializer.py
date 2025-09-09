@@ -1,7 +1,7 @@
 import json
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal, engine, Base
-from app.models.product import Product
+from app.models.models import Product
 
 def create_and_populate_db(json_path: str = "app/data/sale.json"):
     Base.metadata.create_all(bind=engine)
@@ -12,7 +12,9 @@ def create_and_populate_db(json_path: str = "app/data/sale.json"):
 
         if db.query(Product).count() == 0:
             for item in data:
-                item['loc'] = json.dumps(item['loc'])
+                item['lat'],item['lon'] = item['loc'][0],item['loc'][1]
+                item.pop('loc')
+                # print(type(item['loc']))
                 db_sale = Product(**item)
                 db.add(db_sale)
             db.commit()
