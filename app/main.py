@@ -9,3 +9,9 @@ create_and_populate_db()
 app.add_middleware(LoggerMiddleware)
 app.include_router(router)
 app.include_router(user_router,tags=["Users"])
+
+
+@app.get("/")
+async def home():
+    return {"message": "Welcome to the FastAPI Assignment 🚀"
+           "  Visit /docs for API documentation."}

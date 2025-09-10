@@ -34,7 +34,6 @@ def validate_range(lower: Optional[int] = 0 , upper: Optional[int] = 100000):
 
 
 
-
 @router.get("/getsorteddata",tags=["From JSON"])
 def getsorteddata( reverse: Optional[bool] = False):
     return dataops.get_sorted_data(reverse=reverse)
