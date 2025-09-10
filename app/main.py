@@ -13,5 +13,5 @@ app.include_router(user_router,tags=["Users"])
 
 @app.get("/")
 async def home():
-    return {"message": "Welcome to the FastAPI Assignment 🚀"
+    return {"message": "Welcome to the FastAPI Assignment "
            "  Visit /docs for API documentation."}
