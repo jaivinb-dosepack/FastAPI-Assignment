@@ -1,10 +1,11 @@
-# FastAPI Production App with APIRouter
+## Create Venv
+    python -m venv venv
 
-Original try/except logic preserved with router integration.
+## Activate Venv
+    source  venv/bin/activate
 
 
 ## Install 
-
     pip install -r requirements.txt
 
 ## To Run server
