@@ -14,9 +14,9 @@ from app.core.database import engine, SessionLocal, Base
 from app.models.models import Product, User
 
 
-router = APIRouter(prefix='/user')
+userRouter = APIRouter()
 
-@router.post("/CreateUser",response_model=schemas.ShowUser)
+@userRouter.post("/CreateUser",response_model=schemas.ShowUser)
 def create_user(user:schemas.UserBase,db: Session = Depends(get_db)):
     new_user = models.User(
         name = user.name,
@@ -32,7 +32,7 @@ def create_user(user:schemas.UserBase,db: Session = Depends(get_db)):
 
 
 
-@router.get("/GetUser")
+@userRouter.get("/GetUser")
 def get_user(db: Session = Depends(get_db)):
     user = db.query(models.User).all()
     return user

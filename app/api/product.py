@@ -13,9 +13,9 @@ from app.core.database import engine, SessionLocal, Base
 from app.models.models import Product
 from app.repository import dataops
 
-router = APIRouter(prefix='/api')
+productRouter = APIRouter()
 
-# models = [Product,User]
+
 # models.Base.metadata.create_all(bind=engine)
 # Base.metadata.drop_all(bind=engine)
 models.Base.metadata.create_all(bind=engine)
@@ -34,73 +34,73 @@ def validate_range(lower: Optional[int] = 0 , upper: Optional[int] = 100000):
 
 
 
-@router.get("/getsorteddata",tags=["From JSON"])
+@productRouter.get("/getsorteddata",tags=["From JSON"])
 def getsorteddata( reverse: Optional[bool] = False):
-    return dataops.get_sorted_data(reverse=reverse)
+    return dataops.get_sorted_data(reverse=5)
 
 
 
-@router.get("/getitem",tags=["From JSON"])
+@productRouter.get("/getitem",tags=["From JSON"])
 def getitem(*,id:str = None ,lat : Optional[float] = None, lon : Optional[float] = None):
    return dataops.getitem(id=id, lat = lat, lon = lon)
 
-@router.get("/getitemslist",tags=["From JSON"])
+@productRouter.get("/getitemslist",tags=["From JSON"])
 def getitemslist(*,status:Optional[str] = None, userid : Optional[str] = None ):
     return dataops.getitemlist(status=status, userid=userid)
 
 
-@router.get("/get_items_in_radius",tags=["From JSON"])
+@productRouter.get("/get_items_in_radius",tags=["From JSON"])
 def get_items_in_radius(*,radius:float =Query(...,gt=0) ,lat :float,lon:float):
     return dataops.get_item_in_radius(radius=radius, lat=lat, lon=lon)
 
 
 
-@router.get("/get_items_by_filter",tags=["From JSON"])
+@productRouter.get("/get_items_by_filter",tags=["From JSON"])
 def get_items_by_filter( filterby: str,   range_params: tuple = Depends(validate_range),radius: Optional[float] = None,lat: Optional[float] = None,lon: Optional[float] = None,words: Optional[str] = None):
    return dataops.get_items_by_filter(filterby=filterby,range_params=range_params,radius=radius,lat=lat,lon=lon,words=words)
 
 
 
-@router.get("/getSortedDatainDB",tags=["From Database"])
+@productRouter.get("/getSortedDatainDB",tags=["From Database"])
 def get_sorted_data_fromDB(reverse: Optional[bool] = False,db: Session = Depends(get_db)):
    return dataops.get_sorted_data_fromdb(reverse=reverse,db=db)
 
 
-@router.get("/getitemfromdb",tags=["From Database"])
+@productRouter.get("/getitemfromdb",tags=["From Database"])
 def getitem(id: Optional[str] = None, lat:Optional[float] = None,lon :Optional[float] = None, db: Session = Depends(get_db)):
     return dataops.getitem_fromdb(db=db, id=id, lat= lat,lon = lon)
 
          
 
-@router.get("/getitemslistfromdb",tags=["From Database"])
+@productRouter.get("/getitemslistfromdb",tags=["From Database"])
 def getitemslist(status: Optional[str] = None, userid: Optional[str] = None, db: Session = Depends(get_db)):
    return dataops.get_itemList_fromdb(status=status,userid=userid,db=db)
 
-@router.get("/get_item_inradius_db",tags=["From Database"])
+@productRouter.get("/get_item_inradius_db",tags=["From Database"])
 def get_items_inradiusdb(radius:float ,lat :float,lon:float,db: Session = Depends(get_db)):
     return dataops.get_item_in_radius_fromdb(radius=radius, lat=lat, lon=lon,db=db)
 
 
 
 
-@router.get("/get_items_by_filterdb",tags=["From Database"])
+@productRouter.get("/get_items_by_filterdb",tags=["From Database"])
 def get_items_by_filter(filterby: str,range_params: tuple = Depends(validate_range),radius: Optional[float] = None,lat: Optional[float] = None,lon: Optional[float] = None,words: Optional[List[str]] = Query(None),db: Session = Depends(get_db)):
     return dataops.get_items_by_filter_fromdb(filterby=filterby,range_params=range_params,radius=radius,lat=lat,lon=lon,words=words,db=db)
 
 
 
 
-@router.post("/InsertData",tags=["CUD Opperation  Database"])
+@productRouter.post("/InsertData",tags=["CUD Opperation  Database"])
 def insertDataInDB(product:schemas.ProductBase,db: Session = Depends(get_db)):
     return dataops.insert_data_in_db(product=product,db=db)
 
 
-@router.put("/UpdateData",tags=["CUD Opperation  Database"])
+@productRouter.put("/UpdateData",tags=["CUD Opperation  Database"])
 def updateData(id:str,product:schemas.ProductUpdate,db: Session = Depends(get_db)):
     return dataops.update_data_in_db(id=id,product=product,db=db)
     
 
-@router.delete("/deleteData",tags=["CUD Opperation  Database"])
+@productRouter.delete("/deleteData",tags=["CUD Opperation  Database"])
 def delete(id:str,db:Session = Depends(get_db)):
     return dataops.delete_data_in_db(id=id,db=db)
 
