@@ -40,7 +40,7 @@ def getitem(*,id:str = None ,lat : Optional[float] = None, lon : Optional[float]
 
 @productRouter.get("/getitemslist",tags=["From JSON"])
 def getitemslist(*,status:Optional[str] = None, userid : Optional[str] = None ):
-    return products.getitemlist(status=status, userid=userid)
+    return products.getitemlist(statusi=status, userid=userid)
 
 
 @productRouter.get("/get_items_in_radius",tags=["From JSON"])

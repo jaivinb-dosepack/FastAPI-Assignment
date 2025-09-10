@@ -27,66 +27,60 @@ def haversine(lat1, lon1, lat2, lon2):
 
 
 def get_sorted_data(reverse: Optional[bool] = False):
-   
     try:
     # Ensure price key exists and is a number
         sorted_data = sorted(data,key=lambda x: x.get('price', 0),reverse=bool(reverse) )
         return {"data": sorted_data}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to sort data: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to sort data: {e}")
 
     
 def getitem(id:Optional[str] = None , lat : Optional[float] = None, lon : Optional[float] = None):
-
-
     try:
         if id is None and lat is None and lon is None:
-            raise HTTPException(status_code=400, detail="Parameter Missing")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parameter Missing")
 
         filtered_data = []
-        for item in data:
-            loc = item.get("loc")
-            # Case 1: All parameters provided
-            if id and lat is not None and lon is not None:
-                if item.get('id') == id and loc[0] == lat and loc[1] == lon:
-                    filtered_data.append(item)
-
-            # Case 2: Partial filtering
-            elif (id and item.get('id') == id) or ((lat is not None and loc[0] == lat) and (lon is not None and loc[1] == lon)):
-                filtered_data.append(item)
-
+        if id and lat is not None and lon is not None:
+            filtered_data = [item for item in data if item.get('id') == id and item.get('loc') == [lat, lon]]
+        else:
+            filtered_data = [item for item in data if (item.get('id') == id if id else False) or (item.get('loc') == [lat, lon] if lat is not None and lon is not None else False)]
+        if not filtered_data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching items found")
+        
         return {"data": filtered_data}
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal Server Error: {e}")
 
 
-def getitemlist(status:Optional[str] = None, userid : Optional[str]=None):
-    if status is None and userid is None:
+def getitemlist(statusi:Optional[str] = None, userid : Optional[str]=None):
+    if statusi is None and userid is None:
         raise HTTPException(status_code=400, detail="Parameter Missing")
-
     try:
         filtered_data = []
 
-        if status and userid:
+        if statusi and userid:
             filtered_data = [
                 item for item in data
-                if item.get('status') == status and item.get('userId') == userid
+                if item.get('status') == statusi and item.get('userId') == userid
             ]
         else:
             filtered_data = [
                 item for item in data
-                if (item.get('status') == status if status else False) or (item.get('userId') == userid if userid else False)]
+                if (item.get('status') == statusi if statusi else False) or (item.get('userId') == userid if userid else False)]
 
+        if not filtered_data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching items found")
         return {"data": filtered_data}
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching UserId/Status data: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error fetching UserId/Status data: {e}")
     
 
 def get_item_in_radius(radius:float,lat:float,lon:float):
@@ -106,36 +100,38 @@ def get_item_in_radius(radius:float,lat:float,lon:float):
                 if distance_to_center <= radius:
                     nearby_items.append(item)
 
+        if not nearby_items:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No items found within the specified radius")
         return {"data": nearby_items}
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to filter radius: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to filter radius: {e}")
     
 def get_items_by_filter(filterby:str,range_params:tuple,radius:Optional[float]=None,lat:Optional[float]=None,lon:Optional[float]=None,words:Optional[str]=None):
 
 
     try:
-        filtered_items = data  # starting point
+        filtered_items = []  # starting point
 
         # Price Filter
         if filterby.lower() == "price":
             if not range_params or len(range_params) != 2:
-                raise HTTPException(status_code=400, detail="Lower and upper bounds are required")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Lower and upper both are required")
             lower, upper = range_params
             filtered_items = [
-                item for item in filtered_items
-                if isinstance(item.get("price"), (int, float)) and lower <= item["price"] <= upper
+                item for item in data
+                if lower <= item["price"] <= upper
             ]
 
         # Radius Filter
         elif filterby.lower() == "radius":
             if radius is None or lat is None or lon is None:
-                raise HTTPException(status_code=400, detail="Radius, lat, and lon are required")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Radius, lat, and lon are required")
 
             nearby_items = []
-            for item in filtered_items:
+            for item in data:
                 loc = item.get("loc")
                 if isinstance(loc, list) and len(loc) >= 2:
                     item_lat, item_lon = loc[0], loc[1]
@@ -147,22 +143,26 @@ def get_items_by_filter(filterby:str,range_params:tuple,radius:Optional[float]=N
         # Description Filter
         elif filterby.lower() == "desc":
             if not words:
-                raise HTTPException(status_code=400, detail="Words parameter is required")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Words parameter is required")
             search_words = [word.strip().lower() for word in words.split(",")]
             filtered_items = [
-                item for item in filtered_items
+                item for item in data
                 if any(word in (item.get("description", "") or "").lower() for word in search_words)
             ]
 
         else:
-            raise HTTPException(status_code=400, detail="Invalid filter type")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filter type")
 
+
+        if not filtered_items:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No items match the filter criteria")
+        
         return {"data": filtered_items}
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Unexpected error: {e}")
 
 
 
@@ -176,14 +176,14 @@ def get_sorted_data_fromdb(db: Session, reverse: Optional[bool] = False):
 
         return {"data":sorted_data}
     except Exception as e:
-        return HTTPException(status_code=500,detail="Internal Serer Error")
+        return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail="Internal Serer Error")
 
 
 
 def getitem_fromdb(db: Session, id:Optional[str] = None , lat : Optional[float] = None, lon : Optional[float] = None):
     try:
         if id is None and lat is None and lon is None:
-            raise HTTPException(status_code=400, detail="Missing required parameters")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required parameters")
 
         query = db.query(models.Product)
         filters = []
@@ -199,38 +199,44 @@ def getitem_fromdb(db: Session, id:Optional[str] = None , lat : Optional[float] 
 
         # If user provides only one coordinate, raise an error
         if (lat is None) != (lon is None):  # XOR conditionif (lat is None) != (lon is None):  # XOR condition
-            raise HTTPException(status_code=400, detail="Both latitude and longitude are required")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Both latitude and longitude are required")
 
         filter_data = query.filter(*filters).all()
+
+        if not filter_data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching items found")
         return {"data": filter_data}
 
     except HTTPException:
         raise
     except (ValueError, SyntaxError) as e:
-        raise HTTPException(status_code=400, detail=f"Invalid input: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid input: {e}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected server error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Unexpected server error: {e}")
 
 
-def get_itemList_fromdb(db:Session,status: Optional[str] = None, userid: Optional[str] = None):
+def get_itemList_fromdb(db:Session,statusi: Optional[str] = None, userid: Optional[str] = None):
     
     try:
-        if status is None and userid is None:
-            raise HTTPException(status_code=400, detail="Missing required parameters")
+        if statusi is None and userid is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required parameters")
 
         filters = []
-        if status:
-            filters.append(models.Product.status == status)
+        if statusi:
+            filters.append(models.Product.status == statusi)
         if userid:
             filters.append(models.Product.userId == userid)
 
         filtered_data = db.query(models.Product).filter(*filters).all()
+
+        if not filtered_data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching items found")
         return {"data": filtered_data}
 
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}") 
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal Server Error: {e}") 
     
 
 
@@ -253,13 +259,14 @@ def get_item_in_radius_fromdb(radius:float,lat:float,lon:float,db: Session):
                 ) < :radius
             """)
         ).params(lat=lat, lon=lon, radius=radius).all()
-
+        if not filter_data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No items found within the specified radius")
         return {"data": filter_data}
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal Server Error: {e}")
 
 
 
@@ -273,7 +280,7 @@ def get_items_by_filter_fromdb(filterby:str,range_params:tuple,radius:Optional[f
         if filterby.lower() == "price":
             lower, upper = range_params
             if lower is None or upper is None:
-                raise HTTPException(status_code=400, detail="Both lower and upper bounds are required")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Both lower and upper bounds are required")
 
             filtered_data = query.filter(
                 and_(models.Product.price >= lower, models.Product.price <= upper)
@@ -282,7 +289,7 @@ def get_items_by_filter_fromdb(filterby:str,range_params:tuple,radius:Optional[f
         # Description Filter
         elif filterby.lower() == "desc":
             if not words:
-                raise HTTPException(status_code=400, detail="Words list is required")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Words list is required")
             filtered_data = query.filter(
                 or_(*[models.Product.description.ilike(f"%{word}%") for word in words])
             ).all()
@@ -290,7 +297,7 @@ def get_items_by_filter_fromdb(filterby:str,range_params:tuple,radius:Optional[f
         # Radius Filter
         elif filterby.lower() == "radius":
             if radius is None or lat is None or lon is None:
-                raise HTTPException(status_code=400, detail="Radius, lat, and lon are required")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Radius, lat, and lon are required")
             filtered_data = query.filter(
                 text("""
                     6371 * acos(
@@ -304,14 +311,17 @@ def get_items_by_filter_fromdb(filterby:str,range_params:tuple,radius:Optional[f
             ).params(lat=lat, lon=lon, radius=radius).all()
 
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown filter type: {filterby}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown filter type: {filterby}")
 
+
+        if not filtered_data:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No items match the filter criteria")
         return {"data": filtered_data}
 
     except HTTPException:
         raise  # Let FastAPI handle it
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal Server Error: {e}")
 
 
 def insert_data_in_db(product:schemas.ProductBase,db: Session):
