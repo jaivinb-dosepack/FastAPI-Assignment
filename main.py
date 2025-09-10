@@ -4,7 +4,7 @@ from app.services.db_initializer import create_and_populate_db
 from app.middleware.logger import LoggerMiddleware
 
 
-app = FastAPI(title="Production FastAPI App")
+app = FastAPI(title="Production FastAPI App", description="This is a FastAPI application with a pre-populated database and comprehensive API documentation.")
 
 @app.get("/")
 async def home():

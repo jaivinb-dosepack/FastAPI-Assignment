@@ -1,3 +1,6 @@
+## Clone The Repo
+    git clone https://github.com/jaivinb-dosepack/FastAPI-Assignment
+
 ## Create Venv
     python3 -m venv venv
 
